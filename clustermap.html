@@ -1,0 +1,79 @@
+<html>
+  <head>
+    <title>Micro Thermo Technologies Customer Installations</title>
+    <link rel="shortcut icon" href="https://www.parker.com/parker/common/images/favicon.ico" />
+
+    <script src="ol.js"></script>
+    <script src="https://maps.google.com/maps/api/js?v=3&amp;sensor=false"></script>
+
+    <script>
+    var map, selectControl, longLat, zoom;
+    var gmap, cluster;
+
+    function init()
+	{
+		map = new OpenLayers.Map('map');
+        
+        gmap = new OpenLayers.Layer.Google("Google Streets", {sphericalMercator: true, numZoomLevels: 22});
+        map.addLayer(gmap);
+		
+		var pointStyle = new OpenLayers.Style({
+			label: "${label}",
+			externalGraphic: "${symbol}",
+			pointRadius: "${radius}",
+			graphicXOffset: "${gxoff}",
+			graphicYOffset: "${gyoff}",
+			labelXOffset: "${lxoff}",
+			labelYOffset: "${lyoff}"
+			},{
+				context: {
+					radius: function(feature) {return feature.cluster.length != 1 ? Math.min(feature.cluster.length, 20) + 15 : 12;},
+					symbol: function(feature) {return feature.cluster.length != 1 ? 'img/cluster_red.png' : 'img/pin_blue.png';},
+					label: function(feature) {return feature.cluster.length != 1 ? feature.cluster.length : "";},
+					gxoff: function(feature) {return feature.cluster.length == 1 ? -24 : -1.25*(Math.min(feature.cluster.length,20)+15);},
+					gyoff: function(feature) {return feature.cluster.length == 1 ? -24 : -1.25*(Math.min(feature.cluster.length,20)+15);},
+					lxoff: function(feature) {return -0.25*(Math.min(feature.cluster.length,20)+15);},
+					lyoff: function(feature) {return 0.25*(Math.min(feature.cluster.length,20)+15);}
+				}
+			}
+		);
+
+		customers = new OpenLayers.Layer.Vector("Customers", {
+			protocol: new OpenLayers.Protocol.HTTP({url: "data/customers.dat", format: new OpenLayers.Format.Text()}),
+			strategies: [new OpenLayers.Strategy.Fixed(), new OpenLayers.Strategy.Cluster({distance: 35})],
+			styleMap: new OpenLayers.StyleMap({'default': pointStyle,})
+		});
+        map.addLayer(customers);
+
+        longLat = new OpenLayers.LonLat( -96.0000, 40.0000 )
+            .transform(
+                new OpenLayers.Projection("EPSG:4326"),
+                map.getProjectionObject()
+            );
+        zoom=4;
+        map.setCenter(longLat, zoom);
+		
+		var selectControl = new OpenLayers.Control.SelectFeature(customers, {
+			clickout: true,
+			eventListeners: {featurehighlighted: zoomtocluster}
+			}
+		);
+		map.addControl(selectControl);
+        selectControl.activate();
+    }
+
+	function zoomtocluster(event) {
+		map.setCenter(event.feature.geometry.getBounds().getCenterLonLat());
+		map.zoomIn();
+	}
+
+    </script>
+ 
+  
+</head>
+
+  <body onload="init()">
+    <div id="map"></div>
+  </body>
+
+</html>
